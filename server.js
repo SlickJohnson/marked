@@ -1,15 +1,24 @@
 const express = require('express');
 
-const TurndownService = require('turndown');
-
-const turndown = new TurndownService();
-
 const app = express();
+
+const exphbs = require('express-handlebars');
 
 const port = 3000;
 
+const bodyParser = require('body-parser');
+
+const expressValidator = require('express-validator');
+
+app.engine('handlebars', exphbs({ defaultLayout: 'main' }));
+app.set('view engine', 'handlebars');
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(expressValidator());
+
 app.listen(port, () => console.log(`Listening to port ${port}!`));
 
-app.get('/', (req, res) => {
-  console.log(turndown.turndown('<h1>Hellow!</h1>'));
-});
+require('./controllers/pages')(app);
+
+require('./data/marked-db');

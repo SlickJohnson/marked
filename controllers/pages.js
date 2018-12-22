@@ -1,11 +1,21 @@
+const Page = require('../models/page');
+
 const TurndownService = require('turndown');
 const turndown = new TurndownService();
 
-const Page = require('../models/page');
+require('es6-promise').polyfill();
+
+require('isomorphic-fetch');
+
+const DOMParser = require('dom-parser');
+
+const parser = new DOMParser();
 
 module.exports = app => {
-  app.get('/pages', (req, res) => {
-    res.json(turndown.turndown('<h1>Hellow!</h1>'));
+  // TURNDOWN
+  app.post('/pages/down', (req, res) => {
+    const { link } = req.body;
+    console.log(link);
   });
 
   // INDEX
@@ -16,8 +26,10 @@ module.exports = app => {
 
   // CREATE
   app.post('/pages', (req, res) => {
-    const page = new Page(req.body);
-    Page.save((err, page) => res.redirect(`/`));
+    const { link } = req.body;
+    const page = new Page({ link });
+
+    page.save((err, page) => res.json(page));
   });
 
   // NEW
@@ -28,7 +40,19 @@ module.exports = app => {
   // SHOW
   app.get('/pages/:id', (req, res) => {
     Page.findById(req.params.id)
-      .then(page => res.render('pages-show', { page }))
+      .then(page => {
+        fetch(page.link)
+          .then(data => {
+            return data.text();
+          })
+          .then(html => {
+            const doc = parser.parseFromString(html, 'text/html');
+            const title = doc.getElementsByTagName('title')[0].innerHTML;
+            console.log(title);
+            const markdown = turndown.turndown(html);
+            res.json({ title, markdown });
+          });
+      })
       .catch(err => console.log(err.message));
   });
 
